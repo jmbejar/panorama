@@ -1,0 +1,1 @@
+class StitchingEngineError < StitchingError; end

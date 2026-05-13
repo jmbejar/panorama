@@ -1,5 +1,11 @@
 <% content_for :title, @panorama_project.title %>
 
+<% if @panorama_project.processing? %>
+  <% content_for :head do %>
+    <meta http-equiv="refresh" content="3">
+  <% end %>
+<% end %>
+
 <div class="flex items-start justify-between mb-6">
   <div>
     <h1 class="text-2xl font-bold mb-2"><%= @panorama_project.title %></h1>
@@ -18,26 +24,31 @@
   </div>
 </div>
 
-<% if @panorama_project.source_photos.any? %>
-  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-    <% @panorama_project.source_photos.each do |photo| %>
-      <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <div class="aspect-square bg-gray-100 flex items-center justify-center">
-          <% if photo.image.attached? %>
-            <%= image_tag photo.image.representation(resize_to_limit: [ 400, 400 ]),
-                  class: "w-full h-full object-cover", alt: photo.filename.to_s %>
-          <% end %>
+<%= render "status_section", panorama_project: @panorama_project %>
+
+<section class="mt-8">
+  <h2 class="text-lg font-semibold mb-3">Source photos</h2>
+  <% if @panorama_project.source_photos.any? %>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <% @panorama_project.source_photos.each do |photo| %>
+        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div class="aspect-square bg-gray-100 flex items-center justify-center">
+            <% if photo.image.attached? %>
+              <%= image_tag photo.image.representation(resize_to_limit: [ 400, 400 ]),
+                    class: "w-full h-full object-cover", alt: photo.filename.to_s %>
+            <% end %>
+          </div>
+          <div class="p-3 text-xs text-gray-700 space-y-0.5">
+            <div class="font-medium text-gray-900">#<%= photo.position %> · <%= photo.filename %></div>
+            <div><%= photo.width %>×<%= photo.height %> px</div>
+            <div><%= human_file_size(photo.file_size) %></div>
+          </div>
         </div>
-        <div class="p-3 text-xs text-gray-700 space-y-0.5">
-          <div class="font-medium text-gray-900">#<%= photo.position %> · <%= photo.filename %></div>
-          <div><%= photo.width %>×<%= photo.height %> px</div>
-          <div><%= human_file_size(photo.file_size) %></div>
-        </div>
-      </div>
-    <% end %>
-  </div>
-<% else %>
-  <div class="bg-white border border-gray-200 rounded-lg p-10 text-center text-sm text-gray-600">
-    No photos uploaded for this project.
-  </div>
-<% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="bg-white border border-gray-200 rounded-lg p-10 text-center text-sm text-gray-600">
+      No photos uploaded for this project.
+    </div>
+  <% end %>
+</section>

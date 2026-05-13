@@ -1,0 +1,1 @@
+class StitchingOutputError < StitchingError; end

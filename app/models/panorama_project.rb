@@ -1,6 +1,8 @@
 class PanoramaProject < ApplicationRecord
   STATUSES = %w[draft uploaded validating ready_to_process processing completed failed].freeze
 
+  STITCHABLE_FROM_STATUSES = %w[uploaded ready_to_process failed].freeze
+
   enum :status, STATUSES.index_by(&:itself), validate: true
 
   has_many :source_photos, -> { order(:position) }, dependent: :destroy
@@ -24,5 +26,55 @@ class PanoramaProject < ApplicationRecord
       photo.populate_metadata_from_blob!
     end
     uploaded! if draft?
+  end
+
+  def stitchable?
+    STITCHABLE_FROM_STATUSES.include?(status) && source_photos.any?
+  end
+
+  def start_processing!
+    final_panorama_image.purge if final_panorama_image.attached?
+    update!(
+      status: :processing,
+      processing_started_at: Time.current,
+      processing_finished_at: nil,
+      failure_reason: nil,
+      stitching_logs: nil,
+      stitching_engine: nil
+    )
+  end
+
+  def complete_with_result!(result)
+    final_panorama_image.attach(
+      io: File.open(result.image_path),
+      filename: "panorama_#{id}.jpg",
+      content_type: "image/jpeg"
+    )
+    update!(
+      status: :completed,
+      processing_finished_at: Time.current,
+      stitching_engine: result.engine,
+      stitching_logs: result.combined_logs,
+      failure_reason: nil
+    )
+  end
+
+  def fail_with_result!(result)
+    update!(
+      status: :failed,
+      processing_finished_at: Time.current,
+      stitching_engine: result.engine,
+      stitching_logs: result.combined_logs,
+      failure_reason: result.error_message.presence || "Stitching failed."
+    )
+  end
+
+  def fail_with_error!(error)
+    update!(
+      status: :failed,
+      processing_finished_at: Time.current,
+      failure_reason: "#{error.class}: #{error.message}",
+      stitching_logs: error.backtrace&.first(20)&.join("\n")
+    )
   end
 end

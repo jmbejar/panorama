@@ -1,0 +1,70 @@
+<% case panorama_project.status %>
+<% when "draft" %>
+  <section class="bg-white border border-gray-200 rounded-lg p-6 text-sm text-gray-700">
+    Add photos to this project to enable stitching.
+  </section>
+
+<% when "uploaded", "validating", "ready_to_process" %>
+  <section class="bg-white border border-gray-200 rounded-lg p-6">
+    <h2 class="text-lg font-semibold mb-2">Ready to stitch</h2>
+    <p class="text-sm text-gray-700 mb-4">
+      You have <%= pluralize(panorama_project.source_photos.size, "photo") %> ready. Click the button below to assemble them into a 360° panorama.
+    </p>
+    <%= button_to "Generate 360 photo",
+          generate_panorama_project_path(panorama_project),
+          method: :post,
+          class: "inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-gray-900 text-white hover:bg-gray-700 cursor-pointer" %>
+  </section>
+
+<% when "processing" %>
+  <section class="bg-amber-50 border border-amber-200 rounded-lg p-6">
+    <h2 class="text-lg font-semibold text-amber-900 mb-2">Stitching in progress…</h2>
+    <p class="text-sm text-amber-900">
+      Started <%= time_ago_in_words(panorama_project.processing_started_at) %> ago. This page refreshes automatically while we work.
+    </p>
+  </section>
+
+<% when "completed" %>
+  <section class="bg-white border border-gray-200 rounded-lg p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold">Your panorama</h2>
+      <% if panorama_project.final_panorama_image.attached? %>
+        <%= link_to "Download",
+              rails_blob_path(panorama_project.final_panorama_image, disposition: "attachment"),
+              class: "inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md bg-gray-900 text-white hover:bg-gray-700" %>
+      <% end %>
+    </div>
+
+    <% if panorama_project.final_panorama_image.attached? %>
+      <%= image_tag panorama_project.final_panorama_image.representation(resize_to_limit: [ 2400, 1200 ]),
+            class: "w-full rounded-md border border-gray-200", alt: "Stitched panorama" %>
+    <% end %>
+
+    <dl class="mt-4 text-xs text-gray-600 grid grid-cols-2 gap-y-1">
+      <dt>Stitching engine</dt>
+      <dd><%= panorama_project.stitching_engine || "—" %></dd>
+      <dt>Processing time</dt>
+      <dd>
+        <% if panorama_project.processing_started_at && panorama_project.processing_finished_at %>
+          <%= distance_of_time_in_words(panorama_project.processing_started_at, panorama_project.processing_finished_at, include_seconds: true) %>
+        <% else %>
+          —
+        <% end %>
+      </dd>
+      <dt>Source photos</dt>
+      <dd><%= panorama_project.source_photos.size %></dd>
+    </dl>
+  </section>
+
+<% when "failed" %>
+  <section class="bg-red-50 border border-red-200 rounded-lg p-6">
+    <h2 class="text-lg font-semibold text-red-900 mb-2">Stitching failed</h2>
+    <p class="text-sm text-red-900 mb-4">
+      <%= panorama_project.failure_reason.presence || "Something went wrong while stitching this panorama." %>
+    </p>
+    <%= button_to "Try again",
+          generate_panorama_project_path(panorama_project),
+          method: :post,
+          class: "inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-gray-900 text-white hover:bg-gray-700 cursor-pointer" %>
+  </section>
+<% end %>

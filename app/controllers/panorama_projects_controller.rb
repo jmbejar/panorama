@@ -1,5 +1,5 @@
 class PanoramaProjectsController < ApplicationController
-  before_action :set_panorama_project, only: [ :show, :destroy ]
+  before_action :set_panorama_project, only: [ :show, :destroy, :generate ]
 
   def index
     @panorama_projects = PanoramaProject.order(created_at: :desc)
@@ -26,6 +26,17 @@ class PanoramaProjectsController < ApplicationController
   def destroy
     @panorama_project.destroy
     redirect_to panorama_projects_path, notice: "Panorama project deleted."
+  end
+
+  def generate
+    unless @panorama_project.stitchable?
+      redirect_to @panorama_project,
+                  alert: "This project can't be stitched yet — upload photos first."
+      return
+    end
+
+    StitchPanoramaJob.perform_later(@panorama_project.id)
+    redirect_to @panorama_project, notice: "Stitching started. This page will refresh while we work on your panorama."
   end
 
   private
