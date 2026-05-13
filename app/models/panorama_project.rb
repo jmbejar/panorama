@@ -2,6 +2,7 @@ class PanoramaProject < ApplicationRecord
   STATUSES = %w[draft uploaded validating ready_to_process processing completed failed].freeze
 
   STITCHABLE_FROM_STATUSES = %w[uploaded ready_to_process failed].freeze
+  ACCEPTS_PHOTOS_STATUSES  = %w[draft uploaded ready_to_process failed].freeze
 
   enum :status, STATUSES.index_by(&:itself), validate: true
 
@@ -30,6 +31,19 @@ class PanoramaProject < ApplicationRecord
 
   def stitchable?
     STITCHABLE_FROM_STATUSES.include?(status) && source_photos.any?
+  end
+
+  def accepts_more_photos?
+    ACCEPTS_PHOTOS_STATUSES.include?(status)
+  end
+
+  # Closes gaps in source_photo positions so the UI always shows
+  # consecutive numbers (1..n). Called after destroying an individual photo.
+  def renumber_source_photos!
+    source_photos.ordered.each_with_index do |photo, idx|
+      new_pos = idx + 1
+      photo.update_column(:position, new_pos) if photo.position != new_pos
+    end
   end
 
   def start_processing!

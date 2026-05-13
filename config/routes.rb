@@ -2,7 +2,9 @@ Rails.application.routes.draw do
   resources :panorama_projects, path: "projects" do
     member do
       post :generate
+      post :add_photos
     end
+    resources :source_photos, only: [ :destroy ], path: "photos"
   end
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

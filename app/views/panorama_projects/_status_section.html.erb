@@ -75,6 +75,28 @@
     <p class="text-sm text-red-900 mb-4">
       <%= panorama_project.failure_reason.presence || "Something went wrong while stitching this panorama." %>
     </p>
+
+    <details class="mb-4 text-sm text-red-900">
+      <summary class="cursor-pointer font-medium">Common reasons stitching fails</summary>
+      <ul class="list-disc pl-5 mt-2 space-y-1">
+        <li>Not enough overlap between adjacent photos.</li>
+        <li>Photos weren't all captured from the same point (the camera moved).</li>
+        <li>Moving people or vehicles caused conflicts between frames.</li>
+        <li>Too few photos to cover the full circle.</li>
+        <li>Scene has too little texture for the matcher to lock onto.</li>
+      </ul>
+      <p class="mt-2 text-xs">
+        You can reorder, remove, or add more photos below, then try again.
+      </p>
+    </details>
+
+    <% if developer_debug?(panorama_project) %>
+      <details class="mb-4">
+        <summary class="cursor-pointer font-medium text-sm text-red-900">Developer log</summary>
+        <pre class="mt-2 text-xs text-red-900 bg-white border border-red-200 rounded p-3 overflow-auto max-h-96 whitespace-pre-wrap"><%= panorama_project.stitching_logs.presence || "(no logs captured)" %></pre>
+      </details>
+    <% end %>
+
     <%= button_to "Try again",
           generate_panorama_project_path(panorama_project),
           method: :post,

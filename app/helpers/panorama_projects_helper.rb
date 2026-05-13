@@ -17,4 +17,11 @@ module PanoramaProjectsHelper
     return "—" if bytes.blank?
     ActiveSupport::NumberHelper.number_to_human_size(bytes)
   end
+
+  # Whether to render developer-only diagnostics like raw stitcher logs.
+  # Always on in development; opt-in elsewhere via ?debug=1 so we can ask a
+  # production user to grab logs without exposing stderr to everyone.
+  def developer_debug?(_panorama_project = nil)
+    Rails.env.development? || params[:debug].present?
+  end
 end

@@ -1,5 +1,5 @@
 class PanoramaProjectsController < ApplicationController
-  before_action :set_panorama_project, only: [ :show, :destroy, :generate ]
+  before_action :set_panorama_project, only: [ :show, :destroy, :generate, :add_photos ]
 
   def index
     @panorama_projects = PanoramaProject.order(created_at: :desc)
@@ -21,6 +21,7 @@ class PanoramaProjectsController < ApplicationController
   end
 
   def show
+    @validation = PanoramaValidator.validate(@panorama_project)
   end
 
   def destroy
@@ -37,6 +38,18 @@ class PanoramaProjectsController < ApplicationController
 
     StitchPanoramaJob.perform_later(@panorama_project.id)
     redirect_to @panorama_project, notice: "Stitching started. This page will refresh while we work on your panorama."
+  end
+
+  def add_photos
+    unless @panorama_project.accepts_more_photos?
+      redirect_to @panorama_project,
+                  alert: "Photos can't be added while this project is #{@panorama_project.status.humanize.downcase}."
+      return
+    end
+
+    files = params.dig(:panorama_project, :photos)
+    @panorama_project.attach_photos(files)
+    redirect_to @panorama_project, notice: "Photos added."
   end
 
   private

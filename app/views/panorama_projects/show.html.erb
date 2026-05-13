@@ -24,24 +24,66 @@
   </div>
 </div>
 
+<% if @validation && @validation.project_warnings.any? %>
+  <section class="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+    <h2 class="text-sm font-semibold text-amber-900 mb-2">Heads up about these photos</h2>
+    <ul class="list-disc pl-5 text-sm text-amber-900 space-y-1">
+      <% @validation.project_warnings.each do |warning| %>
+        <li><%= warning %></li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>
+
 <%= render "status_section", panorama_project: @panorama_project %>
+
+<% if @panorama_project.accepts_more_photos? %>
+  <section class="mt-8 bg-white border border-gray-200 rounded-lg p-5">
+    <h2 class="text-base font-semibold mb-3">Add more photos</h2>
+    <%= form_with url: add_photos_panorama_project_path(@panorama_project),
+                  method: :post,
+                  local: true,
+                  html: { multipart: true, class: "flex items-center gap-3" } do |f| %>
+      <%= f.file_field "panorama_project[photos][]", multiple: true, accept: "image/jpeg,image/png",
+            class: "block w-full text-sm text-gray-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-900 file:text-white hover:file:bg-gray-700" %>
+      <%= f.submit "Upload",
+            class: "inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md bg-gray-900 text-white hover:bg-gray-700 cursor-pointer whitespace-nowrap" %>
+    <% end %>
+  </section>
+<% end %>
 
 <section class="mt-8">
   <h2 class="text-lg font-semibold mb-3">Source photos</h2>
   <% if @panorama_project.source_photos.any? %>
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
       <% @panorama_project.source_photos.each do |photo| %>
-        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div class="aspect-square bg-gray-100 flex items-center justify-center">
+        <% warnings = @validation&.warnings_for(photo) || [] %>
+        <div class="bg-white border <%= warnings.any? ? 'border-amber-300' : 'border-gray-200' %> rounded-lg overflow-hidden">
+          <div class="aspect-square bg-gray-100 flex items-center justify-center relative">
             <% if photo.image.attached? %>
               <%= image_tag photo.image.representation(resize_to_limit: [ 400, 400 ]),
                     class: "w-full h-full object-cover", alt: photo.filename.to_s %>
+            <% end %>
+            <% if warnings.any? %>
+              <span class="absolute top-2 left-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-900 border border-amber-200" title="Validation warning">
+                ⚠ warning
+              </span>
+            <% end %>
+            <% if @panorama_project.accepts_more_photos? %>
+              <%= button_to "Remove",
+                    panorama_project_source_photo_path(@panorama_project, photo),
+                    method: :delete,
+                    form: { data: { turbo_confirm: "Remove this photo?" } },
+                    class: "absolute top-2 right-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/90 text-red-700 hover:bg-white border border-red-200 cursor-pointer" %>
             <% end %>
           </div>
           <div class="p-3 text-xs text-gray-700 space-y-0.5">
             <div class="font-medium text-gray-900">#<%= photo.position %> · <%= photo.filename %></div>
             <div><%= photo.width %>×<%= photo.height %> px</div>
             <div><%= human_file_size(photo.file_size) %></div>
+            <% warnings.each do |w| %>
+              <div class="mt-1 text-amber-800"><%= w %></div>
+            <% end %>
           </div>
         </div>
       <% end %>

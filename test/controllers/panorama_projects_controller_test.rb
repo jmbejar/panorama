@@ -158,4 +158,100 @@ class PanoramaProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Not enough overlap", response.body
     assert_select "form[action=?]", generate_panorama_project_path(project)
   end
+
+  test "show on failed project lists common reasons stitching fails" do
+    project = panorama_projects(:draft_project)
+    project.update!(status: "failed", failure_reason: "bad")
+
+    get panorama_project_path(project)
+
+    assert_select "summary", "Common reasons stitching fails"
+    assert_match "Not enough overlap", response.body
+    assert_match "little texture", response.body
+  end
+
+  test "show with ?debug=1 renders the developer log for failed projects" do
+    project = panorama_projects(:draft_project)
+    project.update!(status: "failed", failure_reason: "bad",
+                    stitching_logs: "cpfind: 0 control points found")
+
+    get panorama_project_path(project, debug: 1)
+
+    assert_match "cpfind: 0 control points found", response.body
+  end
+
+  test "show hides developer log by default in the test environment" do
+    project = panorama_projects(:draft_project)
+    project.update!(status: "failed", failure_reason: "bad",
+                    stitching_logs: "INTERNAL ONLY: cpfind detail")
+
+    get panorama_project_path(project)
+
+    assert_no_match "INTERNAL ONLY: cpfind detail", response.body
+  end
+
+  test "show surfaces validator warnings for the project" do
+    project = PanoramaProject.create!(title: "Few photos")
+    project.attach_photos([ uploaded_file ])
+
+    get panorama_project_path(project)
+
+    assert_select "h2", "Heads up about these photos"
+    assert_match(/Only 1 photo uploaded/, response.body)
+  end
+
+  test "add_photos appends additional photos and renumbers" do
+    project = PanoramaProject.create!(title: "Append")
+    project.attach_photos([ uploaded_file ])
+
+    assert_difference -> { project.source_photos.count }, 2 do
+      post add_photos_panorama_project_path(project), params: {
+        panorama_project: { photos: [ uploaded_file, uploaded_file ] }
+      }
+    end
+
+    positions = project.source_photos.ordered.pluck(:position)
+    assert_equal [ 1, 2, 3 ], positions
+    assert_redirected_to project
+  end
+
+  test "add_photos refuses while processing" do
+    project = panorama_projects(:draft_project)
+    project.update!(status: "processing")
+
+    assert_no_difference -> { SourcePhoto.count } do
+      post add_photos_panorama_project_path(project), params: {
+        panorama_project: { photos: [ uploaded_file ] }
+      }
+    end
+
+    assert_redirected_to project
+    assert_match(/can't be added/, flash[:alert])
+  end
+
+  test "destroying a source photo renumbers remaining photos" do
+    project = PanoramaProject.create!(title: "Renumber")
+    project.attach_photos([ uploaded_file, uploaded_file, uploaded_file ])
+    middle = project.source_photos.ordered.second
+
+    delete panorama_project_source_photo_path(project, middle)
+
+    positions = project.source_photos.ordered.pluck(:position)
+    assert_equal [ 1, 2 ], positions
+    assert_redirected_to project
+  end
+
+  test "destroying a photo is refused while processing" do
+    project = PanoramaProject.create!(title: "Locked")
+    project.attach_photos([ uploaded_file ])
+    project.update!(status: "processing")
+    photo = project.source_photos.first
+
+    assert_no_difference -> { SourcePhoto.count } do
+      delete panorama_project_source_photo_path(project, photo)
+    end
+
+    assert_redirected_to project
+    assert_match(/can't be removed/, flash[:alert])
+  end
 end
