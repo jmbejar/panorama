@@ -17,7 +17,10 @@ class PanoramaProject < ApplicationRecord
   # populate_metadata_from_blob! fails with FileNotFoundError. Partial state on
   # failure is acceptable here — Phase 5 validation surfaces broken uploads.
   def attach_photos(uploaded_files)
-    files = Array(uploaded_files).compact_blank
+    # `flatten` defends against forms that accidentally produce a nested array
+    # (e.g. `panorama_project[photos][][]` instead of `panorama_project[photos][]`).
+    # `compact_blank` drops the empty string Rails injects for empty file inputs.
+    files = Array(uploaded_files).flatten.compact_blank
     return if files.empty?
 
     next_position = (source_photos.maximum(:position) || 0) + 1

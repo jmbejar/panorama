@@ -69,6 +69,14 @@ class PanoramaProjectTest < ActiveSupport::TestCase
     assert_equal "draft", project.reload.status
   end
 
+  test "attach_photos tolerates nested arrays from malformed forms" do
+    project = PanoramaProject.create!(title: "Nested params")
+
+    assert_difference -> { project.source_photos.count }, 1 do
+      project.attach_photos([ [ "" ], [ uploaded_file ] ])
+    end
+  end
+
   test "destroying a project removes its source photos" do
     project = PanoramaProject.create!(title: "Doomed")
     project.attach_photos([ uploaded_file ])

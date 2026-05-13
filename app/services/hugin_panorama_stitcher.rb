@@ -51,8 +51,9 @@ class HuginPanoramaStitcher < PanoramaStitcher
         exit_code: docker[:exit_code]
       )
     end
-  ensure
-    workspace&.cleanup
+    # Workspace cleanup intentionally NOT done here — the StitchingResult points
+    # at workspace.output_image, and the caller (StitchPanoramaJob) needs to
+    # read it before the directory can be removed. Job's ensure block cleans up.
   end
 
   # Extracted so tests can stub the docker invocation without forking docker.

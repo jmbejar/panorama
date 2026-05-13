@@ -42,25 +42,20 @@ class HuginPanoramaStitcherTest < ActiveSupport::TestCase
 
   test "happy path: returns success result pointing at the output image" do
     project = stitchable_project
+    stitcher = StubbedHugin.new(
+      { stdout: "Stitching ok", stderr: "", exit_code: 0 },
+      write_output: true
+    )
 
-    result = nil
-    ENV["PANORAMA_KEEP_WORKSPACE"] = "1"
-    begin
-      stitcher = StubbedHugin.new(
-        { stdout: "Stitching ok", stderr: "", exit_code: 0 },
-        write_output: true
-      )
-      result = stitcher.stitch(project)
-    ensure
-      ENV.delete("PANORAMA_KEEP_WORKSPACE")
-    end
+    result = stitcher.stitch(project)
 
     assert result.success?
     assert_equal "hugin", result.engine
-    assert_predicate result.image_path, :exist?
+    assert_predicate result.image_path, :exist?,
+                     "stitcher must leave the output on disk for the job to read"
     assert_includes result.stdout, "Stitching ok"
   ensure
-    FileUtils.rm_rf(PanoramaWorkspace.new(project).root_path)
+    FileUtils.rm_rf(PanoramaWorkspace.new(project).root_path) if project
   end
 
   test "docker exits zero but produces no output image → failure with output-missing message" do

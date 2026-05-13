@@ -82,6 +82,21 @@ class StitchPanoramaJobTest < ActiveJob::TestCase
     end
   end
 
+  test "cleans up the panorama workspace after attaching the result" do
+    project = stitchable_project
+    workspace = PanoramaWorkspace.new(project)
+
+    with_stitcher(WorkspaceWritingStubStitcher) do
+      StitchPanoramaJob.perform_now(project.id)
+    end
+
+    project.reload
+    assert_equal "completed", project.status
+    assert project.final_panorama_image.attached?
+    assert_not workspace.root_path.exist?,
+               "job ensure block should remove the workspace once the file has been attached"
+  end
+
   private
 
   def with_stitcher(klass)
@@ -103,6 +118,26 @@ class StitchPanoramaJobTest < ActiveJob::TestCase
     def engine_name = "stub"
     def stitch(_project)
       raise "kaboom"
+    end
+  end
+
+  # Simulates the Hugin path: builds the workspace, drops a file in output/,
+  # returns a StitchingResult that points at it. Lets us assert the job —
+  # not the stitcher — is the thing that cleans the workspace up.
+  class WorkspaceWritingStubStitcher < PanoramaStitcher
+    def engine_name = "ws_stub"
+    def stitch(project)
+      workspace = PanoramaWorkspace.new(project)
+      workspace.prepare!
+      FileUtils.cp(
+        Rails.root.join("test/fixtures/files/test_photo.jpg"),
+        workspace.output_image
+      )
+      StitchingResult.success(
+        image_path: workspace.output_image,
+        engine: "ws_stub",
+        stdout: "ok"
+      )
     end
   end
 end

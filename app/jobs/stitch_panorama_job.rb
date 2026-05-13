@@ -20,6 +20,11 @@ class StitchPanoramaJob < ApplicationJob
   rescue StandardError => e
     project&.fail_with_error!(e)
     raise
+  ensure
+    # Clean up the stitcher's working directory only after complete_with_result!
+    # has read result.image_path. PanoramaWorkspace.cleanup respects
+    # PANORAMA_KEEP_WORKSPACE=1, so debug runs are still preserved.
+    PanoramaWorkspace.new(project).cleanup if project
   end
 
   private

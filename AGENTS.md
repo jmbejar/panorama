@@ -55,7 +55,7 @@ Real stitching engine (Hugin):
 
 **Production uses four SQLite databases** (see `config/database.yml`): `primary`, `cache`, `queue`, `cable`. Migrations for the non-primary ones go in `db/cache_migrate`, `db/queue_migrate`, `db/cable_migrate` — Rails will not auto-route a migration to them.
 
-**Image pipeline workspace.** `PanoramaWorkspace` owns `tmp/panorama_projects/:id/{input,output,logs}` and is the contract between a stitcher and the rest of the app: input images come from Active Storage download, output is read back from `output/panorama.jpg`, and per-step logs from `logs/` are concatenated into `project.stitching_logs`. The fake stitcher doesn't use the workspace; the Hugin stitcher does. Phase 5 validation will reuse it.
+**Image pipeline workspace.** `PanoramaWorkspace` owns `tmp/panorama_projects/:id/{input,output,logs}` and is the contract between a stitcher and the rest of the app: input images come from Active Storage download, output is read back from `output/panorama.jpg`, and per-step logs from `logs/` are concatenated into `project.stitching_logs`. The fake stitcher doesn't use the workspace; the Hugin stitcher does. On macOS, Docker Desktop must have the repo path added to Settings → Resources → File Sharing for the bind mount to work.
 
 **Hugin runs inside Docker, not on the host.** `HuginPanoramaStitcher` shells out to `docker run --rm -v <workspace>:/work panorama-hugin:latest`. The actual pipeline (`pto_gen → cpfind → cpclean → autooptimiser → pano_modify → hugin_executor`) lives in `docker/hugin/stitch.sh`. Per-step logs land in `/work/logs/NN_<step>.log` so a failed run still produces enough diagnostic info for the failed-state UI.
 

@@ -24,10 +24,12 @@ class PanoramaWorkspace
   def logs_path     = root_path.join("logs")
   def output_image  = output_path.join(OUTPUT_FILENAME)
 
-  # Creates the directory tree and downloads every attached source photo into
-  # input/, named with a zero-padded position prefix so directory order matches
-  # capture order (cpfind cares about this for --multirow).
+  # Creates the directory tree (clean of any prior stitch attempt) and
+  # downloads every attached source photo into input/, named with a zero-padded
+  # position prefix so directory order matches capture order (cpfind cares
+  # about this for --multirow).
   def prepare!
+    FileUtils.rm_rf(root_path)
     FileUtils.mkdir_p([ input_path, output_path, logs_path ])
 
     project.source_photos.ordered.each do |photo|
