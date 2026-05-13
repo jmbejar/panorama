@@ -1,0 +1,43 @@
+<% content_for :title, "Panorama projects" %>
+
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">Panorama projects</h1>
+</div>
+
+<% if @panorama_projects.empty? %>
+  <div class="bg-white rounded-lg border border-gray-200 p-10 text-center">
+    <h2 class="text-lg font-medium text-gray-900">No projects yet</h2>
+    <p class="mt-2 text-sm text-gray-600">Create your first 360° panorama by uploading a sequence of overlapping photos.</p>
+    <%= link_to "New panorama", new_panorama_project_path,
+          class: "inline-flex items-center mt-6 px-4 py-2 text-sm font-medium rounded-md bg-gray-900 text-white hover:bg-gray-700" %>
+  </div>
+<% else %>
+  <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Title</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Photos</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Created</th>
+          <th class="px-4 py-2"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <% @panorama_projects.each do |project| %>
+          <tr>
+            <td class="px-4 py-3 text-sm font-medium text-gray-900">
+              <%= link_to project.title, project, class: "hover:underline" %>
+            </td>
+            <td class="px-4 py-3"><%= render "status_badge", status: project.status %></td>
+            <td class="px-4 py-3 text-sm text-gray-700"><%= project.source_photos.size %></td>
+            <td class="px-4 py-3 text-sm text-gray-700"><%= project.created_at.to_fs(:short) %></td>
+            <td class="px-4 py-3 text-right">
+              <%= link_to "View", project, class: "text-sm text-blue-600 hover:underline" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

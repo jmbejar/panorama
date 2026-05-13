@@ -1,0 +1,23 @@
+<% content_for :title, "New panorama" %>
+
+<div class="max-w-2xl mx-auto">
+  <h1 class="text-2xl font-bold mb-6">New panorama</h1>
+
+  <section class="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-6">
+    <h2 class="text-base font-semibold text-blue-900 mb-2">How to capture better 360 photos</h2>
+    <ul class="list-disc pl-5 text-sm text-blue-900 space-y-1">
+      <li>Stand in one place and rotate your body, not the camera position.</li>
+      <li>Keep each photo overlapping the previous one by 30–50%.</li>
+      <li>Avoid people or cars moving through the scene.</li>
+      <li>Keep exposure as consistent as possible.</li>
+      <li>Capture enough photos to cover the full circle.</li>
+      <li>For a full sphere, capture additional rows for ceiling and floor coverage.</li>
+    </ul>
+  </section>
+
+  <p class="text-sm text-gray-700 mb-6">
+    Upload a sequence of overlapping photos taken while rotating in place. For best results, keep the camera position stable and overlap each photo by 30–50%.
+  </p>
+
+  <%= render "form", panorama_project: @panorama_project %>
+</div>

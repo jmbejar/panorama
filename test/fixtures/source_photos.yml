@@ -1,0 +1,3 @@
+# SourcePhoto fixtures are intentionally empty.
+# Tests that need attached photos build them via PanoramaProject#attach_photos
+# using test/fixtures/files/test_photo.jpg, so blob metadata is populated correctly.

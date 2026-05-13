@@ -1,0 +1,43 @@
+<% content_for :title, @panorama_project.title %>
+
+<div class="flex items-start justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold mb-2"><%= @panorama_project.title %></h1>
+    <div class="flex items-center gap-3 text-sm text-gray-600">
+      <%= render "status_badge", status: @panorama_project.status %>
+      <span><%= pluralize(@panorama_project.source_photos.size, "photo") %></span>
+      <span>Created <%= @panorama_project.created_at.to_fs(:short) %></span>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-3">
+    <%= link_to "Back to projects", panorama_projects_path, class: "text-sm text-gray-700 hover:underline" %>
+    <%= button_to "Delete", @panorama_project, method: :delete,
+          form: { data: { turbo_confirm: "Delete this panorama project?" } },
+          class: "text-sm text-red-700 hover:underline bg-transparent border-0 cursor-pointer p-0" %>
+  </div>
+</div>
+
+<% if @panorama_project.source_photos.any? %>
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+    <% @panorama_project.source_photos.each do |photo| %>
+      <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div class="aspect-square bg-gray-100 flex items-center justify-center">
+          <% if photo.image.attached? %>
+            <%= image_tag photo.image.representation(resize_to_limit: [ 400, 400 ]),
+                  class: "w-full h-full object-cover", alt: photo.filename.to_s %>
+          <% end %>
+        </div>
+        <div class="p-3 text-xs text-gray-700 space-y-0.5">
+          <div class="font-medium text-gray-900">#<%= photo.position %> · <%= photo.filename %></div>
+          <div><%= photo.width %>×<%= photo.height %> px</div>
+          <div><%= human_file_size(photo.file_size) %></div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <div class="bg-white border border-gray-200 rounded-lg p-10 text-center text-sm text-gray-600">
+    No photos uploaded for this project.
+  </div>
+<% end %>

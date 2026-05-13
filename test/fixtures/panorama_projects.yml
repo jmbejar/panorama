@@ -1,0 +1,7 @@
+draft_project:
+  title: "Empty draft project"
+  status: "draft"
+
+uploaded_project:
+  title: "Project with photos"
+  status: "uploaded"

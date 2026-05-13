@@ -1,0 +1,30 @@
+<%= form_with model: panorama_project, local: true, html: { multipart: true, class: "bg-white border border-gray-200 rounded-lg p-6 space-y-5" } do |f| %>
+  <% if panorama_project.errors.any? %>
+    <div class="rounded-md bg-red-50 border border-red-200 text-red-800 px-4 py-2 text-sm">
+      <ul class="list-disc pl-5">
+        <% panorama_project.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= f.label :title, class: "block text-sm font-medium text-gray-900 mb-1" %>
+    <%= f.text_field :title, required: true,
+          class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-900 focus:ring-gray-900 sm:text-sm border px-3 py-2" %>
+  </div>
+
+  <div>
+    <%= f.label :photos, "Photos", class: "block text-sm font-medium text-gray-900 mb-1" %>
+    <%= f.file_field :photos, multiple: true, accept: "image/jpeg,image/png",
+          class: "block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-900 file:text-white hover:file:bg-gray-700" %>
+    <p class="mt-1 text-xs text-gray-500">JPEG or PNG. Upload your photos in left-to-right capture order.</p>
+  </div>
+
+  <div class="flex items-center justify-end gap-3">
+    <%= link_to "Cancel", panorama_projects_path, class: "text-sm text-gray-700 hover:underline" %>
+    <%= f.submit "Create panorama",
+          class: "inline-flex items-center px-4 py-2 text-sm font-medium rounded-md bg-gray-900 text-white hover:bg-gray-700 cursor-pointer" %>
+  </div>
+<% end %>
