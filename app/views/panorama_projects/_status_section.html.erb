@@ -28,16 +28,29 @@
   <section class="bg-white border border-gray-200 rounded-lg p-6">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-lg font-semibold">Your panorama</h2>
-      <% if panorama_project.final_panorama_image.attached? %>
-        <%= link_to "Download",
-              rails_blob_path(panorama_project.final_panorama_image, disposition: "attachment"),
-              class: "inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md bg-gray-900 text-white hover:bg-gray-700" %>
-      <% end %>
+      <div class="flex items-center gap-2">
+        <%= link_to "Start a new panorama", new_panorama_project_path,
+              class: "inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md border border-gray-300 text-gray-900 hover:bg-gray-50" %>
+        <% if panorama_project.final_panorama_image.attached? %>
+          <%= link_to "Download",
+                rails_blob_path(panorama_project.final_panorama_image, disposition: "attachment"),
+                class: "inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md bg-gray-900 text-white hover:bg-gray-700" %>
+        <% end %>
+      </div>
     </div>
 
     <% if panorama_project.final_panorama_image.attached? %>
+      <%= tag.div nil,
+            class: "w-full aspect-[2/1] bg-black rounded-md overflow-hidden mb-4",
+            data: {
+              controller: "panorama-viewer",
+              panorama_viewer_image_url_value: rails_blob_path(panorama_project.final_panorama_image)
+            } %>
+      <p class="text-xs text-gray-500 mb-4">
+        Drag to look around. Scroll to zoom. The flat equirectangular preview is below.
+      </p>
       <%= image_tag panorama_project.final_panorama_image.representation(resize_to_limit: [ 2400, 1200 ]),
-            class: "w-full rounded-md border border-gray-200", alt: "Stitched panorama" %>
+            class: "w-full rounded-md border border-gray-200", alt: "Flat equirectangular preview" %>
     <% end %>
 
     <dl class="mt-4 text-xs text-gray-600 grid grid-cols-2 gap-y-1">

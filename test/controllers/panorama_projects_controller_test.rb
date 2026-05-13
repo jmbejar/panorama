@@ -144,6 +144,8 @@ class PanoramaProjectsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h2", "Your panorama"
     assert_select "a", text: "Download"
+    assert_select "a", text: "Start a new panorama"
+    assert_select "div[data-controller='panorama-viewer'][data-panorama-viewer-image-url-value]"
   end
 
   test "show with failed project shows reason and retry button" do
