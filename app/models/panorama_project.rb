@@ -25,9 +25,18 @@ class PanoramaProject < ApplicationRecord
 
     next_position = (source_photos.maximum(:position) || 0) + 1
     files.each_with_index do |file, idx|
-      photo = source_photos.create!(position: next_position + idx)
-      photo.image.attach(file)
-      photo.populate_metadata_from_blob!
+      # iPhone HEIC sneaks past the browser as `image/jpeg` because the
+      # extension is .jpeg; HeicConverter sniffs magic bytes and produces a
+      # JPEG so Active Storage variants and Hugin both see a format they can
+      # actually read.
+      attachable = HeicConverter.convert_if_needed(file)
+      begin
+        photo = source_photos.create!(position: next_position + idx)
+        photo.image.attach(attachable)
+        photo.populate_metadata_from_blob!
+      ensure
+        HeicConverter.cleanup(attachable) unless attachable.equal?(file)
+      end
     end
     uploaded! if draft?
   end

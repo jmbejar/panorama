@@ -15,9 +15,10 @@ set -eu
 log()  { echo "[$(date -u +%H:%M:%S)] $*"; }
 fail() { echo "ERROR: $*" >&2; exit 1; }
 
-INPUT_DIR=/work/input
-OUTPUT_DIR=/work/output
-LOGS_DIR=/work/logs
+WORK_DIR=${WORKSPACE:-/work}
+INPUT_DIR=$WORK_DIR/input
+OUTPUT_DIR=$WORK_DIR/output
+LOGS_DIR=$WORK_DIR/logs
 PTO=$LOGS_DIR/project.pto
 
 [ -d "$INPUT_DIR" ] || fail "missing $INPUT_DIR"
@@ -39,11 +40,39 @@ run_step() {
 }
 
 run_step 01_pto_gen        pto_gen -o "$PTO" "$@"
-run_step 02_cpfind         cpfind --multirow --celeste -o "$PTO" "$PTO"
+# --linearmatch (vs --multirow) only looks for control points between
+# nearby images in the input order. For phone-based panoramas (user
+# captures left-to-right in sequence) this prevents the optimizer from
+# collapsing non-adjacent photos onto the same yaw, which is what was
+# producing "excessive image overlap" failures in enblend. Trade-off:
+# this assumes input photos are in capture order — already true because
+# PanoramaWorkspace names them by `position`. --linearmatchlen=2 means
+# each image is matched with the next 2 in sequence (enough overlap
+# coverage for typical 60-70% phone captures).
+run_step 02_cpfind         cpfind --linearmatch --linearmatchlen=2 --celeste -o "$PTO" "$PTO"
 run_step 03_cpclean        cpclean -o "$PTO" "$PTO"
 run_step 04_autooptimiser  autooptimiser -a -m -l -s -o "$PTO" "$PTO"
 run_step 05_pano_modify    pano_modify --canvas=AUTO --crop=AUTO --output-type=NORMAL -o "$PTO" "$PTO"
-run_step 06_stitch         hugin_executor --stitching --prefix="$OUTPUT_DIR/panorama" "$PTO"
+
+# Steps 6a + 6b replace `hugin_executor --stitching`: that wrapper invokes
+# nona + enblend with no way to pass custom enblend flags, and
+# pano_modify's --blender-args doesn't reliably round-trip through the PTO.
+# Running nona then enblend manually lets us pick a more tolerant seam
+# generator (see below).
+run_step 06a_nona          nona -m TIFF_m -z LZW -o "$OUTPUT_DIR/panorama" "$PTO"
+
+# enblend's default seam generator (graph-cut) refuses to blend images with
+# heavy overlap — "excessive image overlap detected; too high risk of
+# defective seam line". Phone-based panorama captures routinely have
+# 60-70% overlap, which trips graph-cut. The older NFT
+# (nearest-feature-transform) generator is more permissive at the cost of
+# slightly less optimal seams.
+log "06b_enblend: blending tiles → $OUTPUT_DIR/panorama.tif"
+enblend --primary-seam-generator=nearest-feature-transform \
+        -o "$OUTPUT_DIR/panorama.tif" \
+        "$OUTPUT_DIR"/panorama*.tif \
+        > "$LOGS_DIR/06b_enblend.log" 2>&1 \
+        || fail "06b_enblend failed (exit $?) — see $LOGS_DIR/06b_enblend.log"
 
 # hugin_executor produces panorama.tif by default for the NORMAL output type;
 # convert to JPEG so the host has a predictable filename.

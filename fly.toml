@@ -1,0 +1,64 @@
+# fly.toml app configuration for panorama-still-snow-7426
+# See https://fly.io/docs/reference/configuration/
+
+app = 'panorama-still-snow-7426'
+primary_region = 'gru'
+console_command = '/rails/bin/rails console'
+
+[build]
+
+[env]
+  # Selects the in-container Hugin stitcher — no docker-in-docker.
+  PANORAMA_STITCHER = 'LocalHuginPanoramaStitcher'
+  # Make production URL helpers + host authorization use the Fly hostname.
+  APP_HOST = 'panorama-still-snow-7426.fly.dev'
+  RAILS_LOG_LEVEL = 'info'
+  # 5 is required so the queue DB connection pool can serve Solid Queue's
+  # default 5 worker threads (RAILS_MAX_THREADS also sizes Puma's pool).
+  RAILS_MAX_THREADS = '5'
+  WEB_CONCURRENCY = '1'
+  # Run Solid Queue inside Puma; avoids needing a second machine for jobs.
+  SOLID_QUEUE_IN_PUMA = 'true'
+  # The container runs as non-root (UID 1000) so it can't bind port 80
+  # (Linux reserves <1024 for privileged processes). Move Thruster to an
+  # unprivileged port; fly-proxy still terminates 443/80 at the edge.
+  HTTP_PORT = '8080'
+  # Cap pathological uploads (Thruster default is 0 = unlimited). 250 MB
+  # covers ~25 phone photos and bounds memory pressure.
+  MAX_REQUEST_BODY = '262144000'
+  # Default 30s would time out a 50 MB upload on slow mobile.
+  HTTP_READ_TIMEOUT = '300'
+  HTTP_WRITE_TIMEOUT = '300'
+
+# Single persistent volume for the four SQLite DBs and Active Storage local
+# disk (Rails.root.join("storage") == /rails/storage in the container).
+[[mounts]]
+  source = 'panorama_data'
+  destination = '/rails/storage'
+  initial_size = '10gb'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # SQLite + Solid-Queue-in-Puma means we never want Fly to suspend the
+  # machine mid-stitch. Keep one warm machine.
+  auto_stop_machines = false
+  auto_start_machines = false
+  min_machines_running = 1
+  processes = ['app']
+
+  [http_service.concurrency]
+    type = 'requests'
+    soft_limit = 25
+    hard_limit = 50
+
+  [[http_service.checks]]
+    grace_period = '20s'
+    interval = '15s'
+    method = 'GET'
+    timeout = '5s'
+    path = '/up'
+
+[[vm]]
+  size = 'performance-2x'
+  swap_size_mb = 1024
