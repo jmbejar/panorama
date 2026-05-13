@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Build the panorama-hugin Docker image used by HuginPanoramaStitcher.
+# Run this once after cloning the repo, and re-run after editing
+# docker/hugin/Dockerfile or docker/hugin/stitch.sh.
+
+set -eu
+
+cd "$(dirname "$0")/.."
+
+if ! command -v docker >/dev/null 2>&1; then
+  echo "docker not found on PATH. Install Docker Desktop or set DOCKER_HOST." >&2
+  exit 127
+fi
+
+exec docker build -t panorama-hugin:latest docker/hugin

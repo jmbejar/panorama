@@ -6,7 +6,7 @@ Guidance for AI agents working in this repository. Read this before making chang
 
 Panorama is a Rails 8.1 app whose goal is to let a user upload a sequence of overlapping photos and stitch them into a 360° equirectangular panorama. The full product spec — domain model, statuses, validation rules, UI flow, error classes, phasing — lives in `docs/360-photo-mvp-claude-code-spec.md`. Treat that file as the source of truth for product scope and naming; this file is only about how to work in the codebase.
 
-The repo currently contains only the Rails scaffold + the spec — there is no domain code yet. Phase 1 / Phase 2 of the spec (skeleton workflow + background job with a fake stitcher) are the starting point.
+Phases 1–3 of the spec are merged: the user-facing workflow, the background job with a swappable stitcher, and the Docker-based Hugin pipeline. The Fake stitcher remains the default (so tests + a fresh `bin/setup` pass with no host dependencies); the real engine is opt-in.
 
 ## Stack
 
@@ -40,7 +40,12 @@ CI mirror:
 - `bin/ci` — runs setup, rubocop, all security scans, tests, and a seed replant (see `config/ci.rb`). Run this before pushing if you want to mirror what GitHub Actions does (`.github/workflows/ci.yml`).
 
 Background jobs:
-- `bin/jobs` — run Solid Queue workers locally when exercising `StitchPanoramaJob` (or similar). Not in `Procfile.dev`; start it in a separate terminal.
+- `bin/jobs` — run Solid Queue workers locally when exercising `StitchPanoramaJob` (or similar). Not in `Procfile.dev`; start it in a separate terminal. In `development` the default queue adapter is `:async` (in-process), so for casual smoke tests you don't need to start a worker.
+
+Real stitching engine (Hugin):
+- `bin/panorama-hugin-build` — build the `panorama-hugin:latest` Docker image (debian-slim + hugin-tools + enblend + ImageMagick). Run once after clone, and again whenever you touch `docker/hugin/`.
+- `PANORAMA_STITCHER=HuginPanoramaStitcher bin/rails server` — opt in to the real engine for a session. Default is `FakePanoramaStitcher`.
+- `PANORAMA_KEEP_WORKSPACE=1` — leave `tmp/panorama_projects/:id/` on disk after a stitch (input/, output/, logs/) for debugging. Default behavior cleans it up.
 
 ## Architecture notes (read these before designing new code)
 
@@ -50,9 +55,11 @@ Background jobs:
 
 **Production uses four SQLite databases** (see `config/database.yml`): `primary`, `cache`, `queue`, `cable`. Migrations for the non-primary ones go in `db/cache_migrate`, `db/queue_migrate`, `db/cable_migrate` — Rails will not auto-route a migration to them.
 
-**Image pipeline workspace.** The spec defines `/tmp/panorama_projects/:project_id/{input,output,logs}` as the staging area for downloading Active Storage blobs, running the stitcher, and capturing logs before re-attaching the output. Treat this temp layout as part of the contract — tests and the real Hugin pipeline both depend on it.
+**Image pipeline workspace.** `PanoramaWorkspace` owns `tmp/panorama_projects/:id/{input,output,logs}` and is the contract between a stitcher and the rest of the app: input images come from Active Storage download, output is read back from `output/panorama.jpg`, and per-step logs from `logs/` are concatenated into `project.stitching_logs`. The fake stitcher doesn't use the workspace; the Hugin stitcher does. Phase 5 validation will reuse it.
 
-**Phase ordering matters.** Per the spec, ship Phases 1–2 (UI + job + fake stitcher) end-to-end *before* integrating Hugin. Resist the urge to wire real CLI tools until the workflow round-trips with the fake.
+**Hugin runs inside Docker, not on the host.** `HuginPanoramaStitcher` shells out to `docker run --rm -v <workspace>:/work panorama-hugin:latest`. The actual pipeline (`pto_gen → cpfind → cpclean → autooptimiser → pano_modify → hugin_executor`) lives in `docker/hugin/stitch.sh`. Per-step logs land in `/work/logs/NN_<step>.log` so a failed run still produces enough diagnostic info for the failed-state UI.
+
+**Phase ordering matters.** Phases 1–3 are done. What's left per the spec: Phase 4 (360 viewer for completed panoramas) and Phase 5 (validation warnings, friendlier error messages, drag-to-reorder, upload progress). Keep the fake stitcher as the test default — never switch the test suite to the Hugin stitcher.
 
 ## Conventions
 
