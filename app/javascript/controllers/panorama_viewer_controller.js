@@ -12,9 +12,13 @@ import { Controller } from "@hotwired/stimulus"
 import * as THREE from "three"
 
 const SPHERE_RADIUS = 500
-const INITIAL_FOV = 75
-const MIN_FOV = 30
-const MAX_FOV = 100
+// 60° vertical FOV ≈ 95° horizontal in a 2:1 container — close to how PSV /
+// Marzipano default. 75° (the textbook three.js sphere viewer value) feels too
+// wide-angle here, like edges-of-walls perspective. Min/max keep the user out
+// of fisheye territory at one end and dolly-zoom-into-flatness at the other.
+const INITIAL_FOV = 60
+const MIN_FOV = 35
+const MAX_FOV = 85
 const ROTATE_SPEED = 0.15
 const ZOOM_SPEED = 0.05
 const LATITUDE_LIMIT = 85
