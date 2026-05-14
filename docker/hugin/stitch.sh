@@ -40,16 +40,14 @@ run_step() {
 }
 
 run_step 01_pto_gen        pto_gen -o "$PTO" "$@"
-# --linearmatch (vs --multirow) only looks for control points between
-# nearby images in the input order. For phone-based panoramas (user
-# captures left-to-right in sequence) this prevents the optimizer from
-# collapsing non-adjacent photos onto the same yaw, which is what was
-# producing "excessive image overlap" failures in enblend. Trade-off:
-# this assumes input photos are in capture order — already true because
-# PanoramaWorkspace names them by `position`. --linearmatchlen=2 means
-# each image is matched with the next 2 in sequence (enough overlap
-# coverage for typical 60-70% phone captures).
-run_step 02_cpfind         cpfind --linearmatch --linearmatchlen=2 --celeste -o "$PTO" "$PTO"
+# --multirow uses Hugin's heuristic to find control points between any
+# pair of images that share visual features, including the first ↔ last
+# pair that closes the loop on a 360° panorama. It can mis-match when
+# input photos are near-duplicates (the user took two shots from the same
+# angle by accident); in that case enblend later rejects the run with
+# "excessive image overlap detected" and we surface a friendly message
+# pointing the user at the duplicate to remove.
+run_step 02_cpfind         cpfind --multirow --celeste -o "$PTO" "$PTO"
 run_step 03_cpclean        cpclean -o "$PTO" "$PTO"
 run_step 04_autooptimiser  autooptimiser -a -m -l -s -o "$PTO" "$PTO"
 run_step 05_pano_modify    pano_modify --canvas=AUTO --crop=AUTO --output-type=NORMAL -o "$PTO" "$PTO"
